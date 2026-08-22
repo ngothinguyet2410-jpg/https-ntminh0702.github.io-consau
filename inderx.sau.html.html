@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sâu Hack Não - 100 Màn Vượt Đảo</title>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+        }
+        h1 { color: #ff4757; font-size: 22px; margin: 5px 0; }
+        #stats { font-size: 16px; margin-bottom: 10px; color: #0fff95; }
+        canvas {
+            background-color: #1e1b4b;
+            border: 4px solid #6366f1;
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
+            border-radius: 12px;
+            max-width: 100%;
+        }
+        .controls { margin-top: 15px; color: #94a3b8; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <h1>SÂU HACK NÃO - 100 MÀN VƯỢT ĐẢO</h1>
+    <div id="stats">Màn: <span id="level">1</span>/100 | Táo cần ăn: <span id="target">3</span> | Đã ăn: <span id="score">0</span></div>
+    
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <div class="controls">
+        Màu sâu: <input type="color" id="snakeColor" value="#10b981">
+        Tốc độ (ms): <input type="number" id="gameSpeed" value="100" min="20" max="300" style="width: 50px;"><br>
+        <i>(Dùng phím Mũi tên để bắt đầu di chuyển)</i>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const snakeColorInput = document.getElementById("snakeColor");
+        const speedInput = document.getElementById("gameSpeed");
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [];
+        let velocityX = 0, velocityY = 0; // Đứng im khi mới vào màn
+        let apple = { x: 5, y: 5, type: 'normal' };
+        let obstacles = [];
+        let currentLevel = 1, scoreInLevel = 0, targetScore = 3, gameRunning = true;
+
+        function initLevel() {
+            snake = [{ x: 5, y: 10 }, { x: 4, y: 10 }, { x: 3, y: 10 }];
+            velocityX = 0; // Đứng im chờ người chơi bấm phím
+            velocityY = 0;
+            scoreInLevel = 0;
+            targetScore = Math.min(3 + Math.floor(currentLevel / 10), 8);
+            document.getElementById("level").innerText = currentLevel;
+            document.getElementById("target").innerText = targetScore;
+            document.getElementById("score").innerText = scoreInLevel;
+            generateObstacles();
+            generateApple();
+        }
+
+        function generateObstacles() {
+            obstacles = [];
+            let obsCount = Math.min(Math.floor(currentLevel * 1.2), 35);
+            for (let i = 0; i < obsCount; i++) {
+                let obs = { x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount) };
+                if (obs.x >= 2 && obs.x <= 6 && obs.y === 10) continue;
+                obstacles.push(obs);
+            }
+        }
+
+        function generateApple() {
+            apple.x = Math.floor(Math.random() * tileCount);
+            apple.y = Math.floor(Math.random() * tileCount);
+            apple.type = Math.random() < 0.3 ? 'flying' : 'normal';
+        }
+
+        document.addEventListener("keydown", e => {
+            if (e.key === "ArrowLeft" && velocityX === 0) { velocityX = -1; velocityY = 0; }
+            if (e.key === "ArrowRight" && velocityX === 0) { velocityX = 1; velocityY = 0; }
+            if (e.key === "ArrowUp" && velocityY === 0) { velocityX = 0; velocityY = -1; }
+            if (e.key === "ArrowDown" && velocityY === 0) { velocityX = 0; velocityY = 1; }
+        });
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            draw();
+            setTimeout(gameLoop, parseInt(speedInput.value));
+        }
+
+        function update() {
+            if (velocityX === 0 && velocityY === 0) return; // Nếu chưa bấm phím thì sâu đứng im
+
+            const head = { x: snake[0].x + velocityX, y: snake[0].y + velocityY };
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) { gameOver(); return; }
+            for (let i = 0; i < snake.length; i++) if (head.x === snake[i].x && head.y === snake[i].y) { gameOver(); return; }
+            for (let i = 0; i < obstacles.length; i++) if (head.x === obstacles[i].x && head.y === obstacles[i].y) { gameOver(); return; }
+
+            if (head.x === apple.x && head.y === apple.y) {
+                scoreInLevel++;
+                document.getElementById("score").innerText = scoreInLevel;
+                if (scoreInLevel >= targetScore) {
+                    currentLevel++;
+                    if (currentLevel > 100) { gameRunning = false; alert("Hoàn thành 100 màn!"); return; }
+                    initLevel();
+                } else { generateApple(); }
+            } else { snake.pop(); }
+            snake.unshift(head);
+        }
+
+        function draw() {
+            ctx.fillStyle = "#1e1b4b"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#64748b";
+            obstacles.forEach(obs => ctx.fillRect(obs.x * gridSize + 2, obs.y * gridSize + 2, gridSize - 4, gridSize - 4));
+            
+            ctx.fillStyle = apple.type === 'flying' ? "#facc15" : "#ef4444";
+            ctx.beginPath(); ctx.arc((apple.x * gridSize) + gridSize/2, (apple.y * gridSize) + gridSize/2, gridSize/2 - 3, 0, 2 * Math.PI); ctx.fill();
+
+            let color = snakeColorInput.value;
+            snake.forEach((part, index) => {
+                ctx.fillStyle = index === 0 ? color : color + "AA";
+                ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
+            });
+        }
+
+        function gameOver() { alert("Thua rồi! Bấm OK để chơi lại."); initLevel(); }
+        initLevel(); gameLoop();
+    </script>
+</body>
+</html>
